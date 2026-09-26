@@ -1,0 +1,15 @@
+import { runRepositoryExplorer } from './repositoryExplorer.agent';
+import { runRootCauseInvestigator } from './rootCauseInvestigator.agent';
+import { runFixPlanner } from './fixPlanner.agent';
+import { runFixer } from './fixer.agent';
+import { runVerification } from './verification.agent';
+import type { Investigation, AgentKey, Repository } from '../types';
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const repo: Repository = { id: 'repo-api-gateway', name: 'acme-corp/api-gateway', language: 'TypeScript', fileCount: 86, testCount: 24, status: 'Analyzed', lastAnalyzed: 'Now', branch: 'main' };
+export class Orchestrator {
+  async discover(investigation: Investigation, onUpdate: (next: Investigation) => void): Promise<Investigation> { let next: Investigation = { ...investigation, status: 'investigating' }; onUpdate(next); await wait(650); next = { ...this.complete(next, 'repo-explorer', 'Repository analyzed'), explorer: runRepositoryExplorer(repo, next.problem) }; onUpdate(next); await wait(650); next = { ...this.complete(next, 'root-cause', 'Root cause identified'), rootCause: runRootCauseInvestigator(next.problem, next.explorer!) }; onUpdate(next); await wait(650); next = { ...this.complete(next, 'fix-planner', 'Fix plan created'), fixPlan: runFixPlanner(next.rootCause!, next.explorer!), status: 'awaiting-approval' }; onUpdate(next); return next; }
+  async apply(investigation: Investigation, onUpdate: (next: Investigation) => void): Promise<Investigation> { let next: Investigation = { ...investigation, status: 'applying' }; next = this.setStatus(next, 'fixer', 'running'); onUpdate(next); await wait(900); next = { ...next, fixer: runFixer(next.fixPlan!), status: 'approved' }; next = this.complete(next, 'fixer', 'Changes applied'); onUpdate(next); return next; }
+  async verify(investigation: Investigation, onUpdate: (next: Investigation) => void): Promise<Investigation> { let next: Investigation = { ...investigation, status: 'verifying' }; next = this.setStatus(next, 'verification', 'running'); onUpdate(next); await wait(900); next = { ...next, verification: runVerification(), status: 'verified', finalReport: { generatedAt: new Date().toISOString(), summary: 'The token refresh race condition was fixed and all verification checks passed.' } }; next = this.complete(next, 'verification', 'Verification completed'); onUpdate(next); return next; }
+  private complete(inv: Investigation, key: AgentKey, description: string): Investigation { return this.setStatus(inv, key, 'completed', description); }
+  private setStatus(inv: Investigation, key: AgentKey, status: 'running' | 'completed', description?: string): Investigation { return { ...inv, updatedAt: new Date().toISOString(), activities: inv.activities.map((a) => a.key === key ? { ...a, status, description: description ?? a.description, startedAt: a.startedAt ?? new Date().toISOString(), completedAt: status === 'completed' ? new Date().toISOString() : a.completedAt } : a) }; }
+}

@@ -1,0 +1,4 @@
+import { CheckCircle2, Download, PartyPopper } from 'lucide-react';
+import type { VerificationOutput } from '../../types';
+import { Badge, Button, Card } from '../ui/primitives';
+export function VerificationCard({ data, onReport }: { data: VerificationOutput; onReport: () => void }) { return <Card className="verification-card"><div className="verification-hero"><div className="success-icon"><PartyPopper size={20} /></div><div><div className="eyebrow">Verification</div><h3>Fix verified</h3><p>All checks passed. The original intermittent 401 issue is resolved.</p></div><Badge tone="green">PASS</Badge></div><div className="check-grid">{data.checks.map((check) => <div className="verification-check" key={check.name}><CheckCircle2 size={17} /><div><strong>{check.name}</strong><span>{check.detail}</span></div><time>{check.duration}</time></div>)}</div><div className="action-row"><Button onClick={onReport}>Open final report</Button></div></Card>; }
